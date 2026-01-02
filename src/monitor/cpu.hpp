@@ -13,3 +13,6 @@ double getCpuFrequencyGHz();
 
 // ✅ ONE declaration, exactly this
 std::string getCpuName();
+
+void getCpuCoresAndThreads(int& cores, int& threads);
+

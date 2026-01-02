@@ -1,45 +1,72 @@
 #include "cpu.hpp"
+
 #include <windows.h>
 #include <intrin.h>
 #include <string>
+#include <vector>
 
-CpuTimes getCpuTimes(){
+// ==========================
+// CPU USAGE
+// ==========================
+
+CpuTimes getCpuTimes() {
     FILETIME idleTime, kernelTime, userTime;
-    GetSystemTimes(&idleTime,&kernelTime,&userTime);  // get system times
+    GetSystemTimes(&idleTime, &kernelTime, &userTime);
 
-    auto toULL = [](FILETIME ft){   // convert to 64 (combining two 32 numbers inot one 64 bit number)
-        return (static_cast<ULONGLONG>(ft.dwHighDateTime) << 32) | ft.dwLowDateTime;
+    auto toULL = [](FILETIME ft) {
+        return (static_cast<ULONGLONG>(ft.dwHighDateTime) << 32) |
+                ft.dwLowDateTime;
     };
-
 
     return {
-        toULL(idleTime), // return big idle number
-        toULL(kernelTime), // return big kernel number
-        toULL(userTime) // return big user number
+        toULL(idleTime),
+        toULL(kernelTime),
+        toULL(userTime)
     };
 }
 
+double getCpuUsage(const CpuTimes& prev, const CpuTimes& curr) {
+    ULONGLONG idleDiff = curr.idle - prev.idle;
 
-double getCpuUsage( const CpuTimes& prev, const CpuTimes& curr ){
+    // Kernel time already includes idle → subtract it
+    ULONGLONG totalPrev = (prev.kernel - prev.idle) + prev.user;
+    ULONGLONG totalCurr = (curr.kernel - curr.idle) + curr.user;
 
-    ULONGLONG idleDiff = curr.idle - prev.idle;   // calculate updated idle time
-    ULONGLONG totalPrev = prev.kernel + prev.user;  // find total prev usage
-    ULONGLONG totalCurr = curr.kernel + curr.user;  // find total current usage
-    ULONGLONG totalDiff = totalCurr - totalPrev; // find difference
+    ULONGLONG totalDiff = totalCurr - totalPrev;
+    if (totalDiff == 0) return 0.0;
 
-if (totalDiff == 0) return 0.0;
-return 100.0 * (totalDiff - idleDiff) / totalDiff;
+    return 100.0 * (totalDiff - idleDiff) / totalDiff;
 }
+
+// ==========================
+// CPU FREQUENCY (GHz)
+// ==========================
 
 double getCpuFrequencyGHz() {
-    LARGE_INTEGER freq;
-    QueryPerformanceFrequency(&freq);
+    HKEY hKey;
+    DWORD mhz = 0;
+    DWORD size = sizeof(DWORD);
 
-    // freq is ticks per second
-    return freq.QuadPart / 1e9; // GHz-ish scale
+    if (RegOpenKeyExA(
+            HKEY_LOCAL_MACHINE,
+            "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
+            0,
+            KEY_READ,
+            &hKey) != ERROR_SUCCESS) {
+        return 0.0;
+    }
+
+    RegQueryValueExA(hKey, "~MHz", nullptr, nullptr, (LPBYTE)&mhz, &size);
+    RegCloseKey(hKey);
+
+    return mhz / 1000.0;
 }
 
-std::string getCpuName(){
+// ==========================
+// CPU NAME
+// ==========================
+
+std::string getCpuName() {
     int cpuInfo[4] = {};
     char name[49] = {};
 
@@ -47,10 +74,49 @@ std::string getCpuName(){
     unsigned int maxId = cpuInfo[0];
 
     if (maxId >= 0x80000004) {
-        __cpuid(reinterpret_cast<int*>(name),     0x80000002);
+        __cpuid(reinterpret_cast<int*>(name),      0x80000002);
         __cpuid(reinterpret_cast<int*>(name + 16), 0x80000003);
         __cpuid(reinterpret_cast<int*>(name + 32), 0x80000004);
     }
 
-     return std::string(name);
+    return std::string(name);
+}
+
+// ==========================
+// CPU CORES & THREADS
+// ==========================
+
+void getCpuCoresAndThreads(int& cores, int& threads) {
+    cores = 0;
+    threads = 0;
+
+    DWORD length = 0;
+    GetLogicalProcessorInformationEx(
+        RelationProcessorCore, nullptr, &length);
+
+    std::vector<uint8_t> buffer(length);
+    auto info =
+        reinterpret_cast<PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX>(
+            buffer.data());
+
+    if (!GetLogicalProcessorInformationEx(
+            RelationProcessorCore, info, &length)) {
+        return;
+    }
+
+    uint8_t* ptr = buffer.data();
+    uint8_t* end = buffer.data() + length;
+
+    while (ptr < end) {
+        auto current =
+            reinterpret_cast<PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX>(ptr);
+
+        if (current->Relationship == RelationProcessorCore) {
+            cores++;
+            threads += __popcnt(
+                current->Processor.GroupMask[0].Mask);
+        }
+
+        ptr += current->Size;
+    }
 }
