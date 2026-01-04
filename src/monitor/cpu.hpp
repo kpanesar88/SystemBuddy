@@ -9,7 +9,7 @@ struct CpuTimes {
 
 CpuTimes getCpuTimes();
 double getCpuUsage(const CpuTimes& prev, const CpuTimes& curr);
-double getCpuFrequencyGHz();
+double getBaseCpuFrequencyGHz();
 
 // ✅ ONE declaration, exactly this
 std::string getCpuName();

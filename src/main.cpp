@@ -1,6 +1,12 @@
 #include <iostream>
 #include <windows.h>
 #include <cstdint>
+#include <iomanip>
+
+
+
+
+
 #include <monitor/cpu.hpp>
 #include <monitor/memory.hpp>
 
@@ -11,7 +17,7 @@ int main() {
     CpuTimes curr = getCpuTimes();
 
     double usage = getCpuUsage(prev, curr);
-    double freq  = getCpuFrequencyGHz();
+    double freq  = getBaseCpuFrequencyGHz();
     std::string cpuName = getCpuName();
 
     int cores = 0;
@@ -29,15 +35,16 @@ int main() {
 
     double ramUsagePercentage = (usedMemGB/totalMemGB) * 100;
 
+    std::cout << std::fixed << std::setprecision(2);
 
     std::cout << "CPU NAME: " << cpuName << "\n";
     std::cout << "CPU USAGE: " << usage << "%\n";
-    std::cout << "CPU FREQ (GHz): " << freq << "\n";
+    std::cout << "BASE CPU FREQ (GHz): " << freq << "\n";
     std::cout << "CPU CORES: " << cores << "\n";
     std::cout << "CPU THREADS: " << threads << "\n";
     std::cout << "TOTAL MEMORY: " << totalMemGB << " GB\n";
     std::cout << "USED MEMORY: " << usedMemGB<< " GB\n";
-    std::cout << "USAGE %: " << ramUsagePercentage << " %\n";
+    std::cout << "RAM USAGE %: " << ramUsagePercentage << "%\n";
 
 
     return 0;

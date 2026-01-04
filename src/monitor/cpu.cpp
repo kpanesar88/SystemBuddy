@@ -26,23 +26,38 @@ CpuTimes getCpuTimes() {
 }
 
 double getCpuUsage(const CpuTimes& prev, const CpuTimes& curr) {
-    ULONGLONG idleDiff = curr.idle - prev.idle;
 
-    // Kernel time already includes idle → subtract it
-    ULONGLONG totalPrev = (prev.kernel - prev.idle) + prev.user;
-    ULONGLONG totalCurr = (curr.kernel - curr.idle) + curr.user;
+    // Guard against invalid samples
+    if (curr.idle   < prev.idle ||
+        curr.kernel < prev.kernel ||
+        curr.user   < prev.user) {
+        return 0.0;
+    }
 
-    ULONGLONG totalDiff = totalCurr - totalPrev;
-    if (totalDiff == 0) return 0.0;
+    ULONGLONG idleDiff =
+        curr.idle - prev.idle;
 
-    return 100.0 * (totalDiff - idleDiff) / totalDiff;
+    ULONGLONG totalDiff =
+        (curr.kernel + curr.user) -
+        (prev.kernel + prev.user);
+
+    if (totalDiff == 0) {
+        return 0.0;
+    }
+
+    double usage =
+        1.0 - (static_cast<double>(idleDiff) /
+               static_cast<double>(totalDiff));
+
+    return usage * 100.0;
 }
+
 
 // ==========================
 // CPU FREQUENCY (GHz)
 // ==========================
 
-double getCpuFrequencyGHz() {
+double getBaseCpuFrequencyGHz() {
     HKEY hKey;
     DWORD mhz = 0;
     DWORD size = sizeof(DWORD);
