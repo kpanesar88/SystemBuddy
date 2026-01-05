@@ -6,7 +6,6 @@
 #include <monitor/systeminfo.hpp>
 
 int main() {
-
     // Snapshot APIs (v1.1)
     CpuInfo cpu     = getCpuInfo();
     MemoryInfo mem  = getMemoryInfo();
