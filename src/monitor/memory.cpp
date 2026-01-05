@@ -1,33 +1,22 @@
 #include "memory.hpp"
 #include <windows.h>
 
-uint64_t getTotalMemoryBytes() {
-    MEMORYSTATUSEX memStatus;
-    memStatus.dwLength = sizeof(memStatus);
+MemoryInfo getMemoryInfo() {
+    MEMORYSTATUSEX mem{};
+    mem.dwLength = sizeof(mem);
 
-    if (!GlobalMemoryStatusEx(&memStatus)) {
-        return 0;
+    MemoryInfo info{};
+
+    if (!GlobalMemoryStatusEx(&mem)) {
+        return info;
     }
 
-    return memStatus.ullTotalPhys;
-}
+    info.total_bytes     = mem.ullTotalPhys;
+    info.available_bytes = mem.ullAvailPhys;
+    info.used_bytes      = info.total_bytes - info.available_bytes;
+    info.usage_percent =
+        (static_cast<double>(info.used_bytes) /
+         static_cast<double>(info.total_bytes)) * 100.0;
 
-uint64_t getAvailableMemoryBytes() {
-    MEMORYSTATUSEX memStatus;
-    memStatus.dwLength = sizeof(memStatus);
-
-    if (!GlobalMemoryStatusEx(&memStatus)) {
-        return 0;
-    }
-
-    return memStatus.ullAvailPhys;
-}
-
-uint64_t getUsedMemoryBytes() {
-    uint64_t total = getTotalMemoryBytes();
-    uint64_t available = getAvailableMemoryBytes();
-
-    if (total == 0 || available == 0) return 0;
-
-    return total - available;
+    return info;
 }

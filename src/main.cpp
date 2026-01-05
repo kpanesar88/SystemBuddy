@@ -3,15 +3,9 @@
 #include <cstdint>
 #include <iomanip>
 
-
-
-
-
 #include <monitor/cpu.hpp>
 #include <monitor/memory.hpp>
 #include <monitor/systeminfo.hpp>
-
-
 
 int main() {
 
@@ -27,16 +21,7 @@ int main() {
     int threads = 0;
     getCpuCoresAndThreads(cores, threads);
 
-    uint64_t totalMemBytes = getTotalMemoryBytes();
-    double totalMemGB = totalMemBytes / (1024.0 * 1024.0 * 1024.0);
-
-    uint64_t usedMemBytes = getUsedMemoryBytes();
-    double usedMemGB = usedMemBytes / (1024.0 * 1024.0 * 1024.0);
-
-    uint64_t availMemBytes = getAvailableMemoryBytes();
-    double availMemGB = availMemBytes / (1024.0 * 1024.0 * 1024.0);
-
-    double ramUsagePercentage = (usedMemGB/totalMemGB) * 100;
+    MemoryInfo mem = getMemoryInfo();
 
     std::cout << std::fixed << std::setprecision(2);
 
@@ -50,18 +35,18 @@ int main() {
     std::cout << "CPU CORES: " << cores << "\n";
     std::cout << "CPU THREADS: " << threads << "\n";
 
+    double totalMemGB = mem.total_bytes / (1024.0 * 1024.0 * 1024.0);
+    double usedMemGB  = mem.used_bytes  / (1024.0 * 1024.0 * 1024.0);
+
     std::cout << "\n----------MEMORY----------\n";
     std::cout << "TOTAL MEMORY: " << totalMemGB << " GB\n";
-    std::cout << "USED MEMORY: " << usedMemGB<< " GB\n";
-    std::cout << "RAM USAGE %: " << ramUsagePercentage << "%\n";
+    std::cout << "USED MEMORY: " << usedMemGB << " GB\n";
+    std::cout << "RAM USAGE %: " << mem.usage_percent << "%\n";
 
     std::cout << "\n----------SYSTEM----------\n";
     std::cout << "OS: Windows " << os.version
-          << " (Build " << os.build << ")\n";
+              << " (Build " << os.build << ")\n";
     std::cout << "Uptime: " << uptime << "\n";
-
-
-
 
     return 0;
 }
